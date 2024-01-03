@@ -10,9 +10,7 @@ import (
 	"strings"
 )
 
-const (
-	sepSize = 8
-)
+const sepSize = 8
 
 type Grid [9][9]int
 
@@ -24,19 +22,19 @@ func main() {
 		log.Fatal("Please, provide the file path")
 	}
 
-	Grids, err := readGridsFromFile(*filePath)
+	grids, err := readGridsFromFile(*filePath)
 	if err != nil {
 		log.Fatal("Error on reading grids from file:", err)
 	}
 
-	log.Printf("Found %v grid(s) in %v\n", len(Grids), *filePath)
+	log.Printf("Found %v grid(s) in %v\n", len(grids), *filePath)
 
-	for i, grid := range Grids {
+	for i, grid := range grids {
 		log.Printf("Solving grid %v...", i+1)
-		SolvedGrid, solved := solve(grid)
+		solvedGrid, solved := solve(grid)
 		if solved {
 			log.Printf("Solved:")
-			printGrids(grid, SolvedGrid)
+			printGrids(grid, solvedGrid)
 		} else {
 			log.Printf("I couldn't solve the grid :(")
 		}
@@ -61,7 +59,7 @@ func solve(grid Grid) (Grid, bool) {
 	return grid, false
 }
 
-func isValid(grid Grid, row int, col int, i int) bool {
+func isValid(grid Grid, row, col, i int) bool {
 	grid[row][col] = i
 	return validRow(grid, row) && validColumn(grid, col) && validSquare(grid, row, col)
 }
@@ -69,12 +67,10 @@ func isValid(grid Grid, row int, col int, i int) bool {
 func validRow(grid Grid, row int) bool {
 	seenValues := []int{}
 	for i := 0; i < 9; i++ {
-		if grid[row][i] != 0 {
-			if slices.Contains(seenValues, grid[row][i]) {
-				return false
-			}
-			seenValues = append(seenValues, grid[row][i])
+		if grid[row][i] != 0 && slices.Contains(seenValues, grid[row][i]) {
+			return false
 		}
+		seenValues = append(seenValues, grid[row][i])
 	}
 	return true
 }
@@ -82,28 +78,24 @@ func validRow(grid Grid, row int) bool {
 func validColumn(grid Grid, col int) bool {
 	seenValues := []int{}
 	for i := 0; i < 9; i++ {
-		if grid[i][col] != 0 {
-			if slices.Contains(seenValues, grid[i][col]) {
-				return false
-			}
-			seenValues = append(seenValues, grid[i][col])
+		if grid[i][col] != 0 && slices.Contains(seenValues, grid[i][col]) {
+			return false
 		}
+		seenValues = append(seenValues, grid[i][col])
 	}
 	return true
 }
 
-func validSquare(grid Grid, row int, col int) bool {
+func validSquare(grid Grid, row, col int) bool {
 	seenValues := []int{}
-	rowSpan := getSpan(row)
-	columnSpan := getSpan(col)
+	rowSpan, colSpan := getSpan(row), getSpan(col)
+
 	for i := rowSpan[0]; i <= rowSpan[2]; i++ {
-		for j := columnSpan[0]; j <= columnSpan[2]; j++ {
-			if grid[i][j] != 0 {
-				if slices.Contains(seenValues, grid[i][j]) {
-					return false
-				}
-				seenValues = append(seenValues, grid[i][j])
+		for j := colSpan[0]; j <= colSpan[2]; j++ {
+			if grid[i][j] != 0 && slices.Contains(seenValues, grid[i][j]) {
+				return false
 			}
+			seenValues = append(seenValues, grid[i][j])
 		}
 	}
 
@@ -111,12 +103,14 @@ func validSquare(grid Grid, row int, col int) bool {
 }
 
 func getSpan(index int) []int {
-	if index < 3 {
+	switch {
+	case index < 3:
 		return []int{0, 1, 2}
-	} else if index < 6 {
+	case index < 6:
 		return []int{3, 4, 5}
+	default:
+		return []int{6, 7, 8}
 	}
-	return []int{6, 7, 8}
 }
 
 func firstEmptyCell(grid Grid) (int, int) {
@@ -133,11 +127,11 @@ func firstEmptyCell(grid Grid) (int, int) {
 func readGridsFromFile(filePath string) ([]Grid, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer file.Close()
 
-	grids := []Grid{}
+	var grids []Grid
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
@@ -172,19 +166,19 @@ func readGridsFromFile(filePath string) ([]Grid, error) {
 }
 
 func printGrids(sourceGrid Grid, solvedGrid Grid) {
-	var result string
+	var result strings.Builder
 	for i := 0; i < 9; i++ {
 		if i > 0 && i%3 == 0 {
-			result += "- - - + - - - + - - - " + strings.Repeat(" ", sepSize) + "- - - + - - - + - - -\n"
+			result.WriteString("- - - + - - - + - - - " + strings.Repeat(" ", sepSize) + "- - - + - - - + - - -\n")
 		}
-		result += rowToString(sourceGrid[i], solvedGrid[i], (i+1)%5 == 0)
+		result.WriteString(rowToString(sourceGrid[i], solvedGrid[i], (i+1)%5 == 0))
 	}
-	result += "\n"
+	result.WriteString("\n")
 
-	fmt.Print(result)
+	fmt.Print(result.String())
 }
 
-func rowToString(firstRow [9]int, secondRow [9]int, showArrow bool) string {
+func rowToString(firstRow, secondRow [9]int, showArrow bool) string {
 	var builder strings.Builder
 
 	for i, value := range firstRow {
@@ -195,10 +189,7 @@ func rowToString(firstRow [9]int, secondRow [9]int, showArrow bool) string {
 	}
 
 	if showArrow {
-		builder.WriteString(
-			strings.Repeat(" ", (sepSize-4)/2) +
-				"--->" +
-				strings.Repeat(" ", (sepSize-4)/2))
+		builder.WriteString(strings.Repeat(" ", (sepSize-4)/2) + "--->" + strings.Repeat(" ", (sepSize-4)/2))
 	} else {
 		builder.WriteString(strings.Repeat(" ", sepSize))
 	}
