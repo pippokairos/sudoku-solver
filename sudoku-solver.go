@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+const (
+	sepSize = 8
+)
+
 type Grid [9][9]int
 
 func main() {
@@ -28,14 +32,11 @@ func main() {
 	log.Printf("Found %v grid(s) in %v\n", len(Grids), *filePath)
 
 	for i, grid := range Grids {
-		log.Printf("Solving grid %v", i+1)
-		log.Printf("Input grid:")
-		printGrid(grid)
-
+		log.Printf("Solving grid %v...", i+1)
 		SolvedGrid, solved := solve(grid)
 		if solved {
-			log.Printf("Solved grid:")
-			printGrid(SolvedGrid)
+			log.Printf("Solved:")
+			printGrids(grid, SolvedGrid)
 		} else {
 			log.Printf("I couldn't solve the grid :(")
 		}
@@ -170,28 +171,45 @@ func readGridsFromFile(filePath string) ([]Grid, error) {
 	return grids, nil
 }
 
-func printGrid(grid Grid) {
+func printGrids(sourceGrid Grid, solvedGrid Grid) {
 	var result string
 	for i := 0; i < 9; i++ {
 		if i > 0 && i%3 == 0 {
-			result += "- - - + - - - + - - -\n"
+			result += "- - - + - - - + - - - " + strings.Repeat(" ", sepSize) + "- - - + - - - + - - -\n"
 		}
-		result += rowToString(grid[i])
+		result += rowToString(sourceGrid[i], solvedGrid[i], (i+1)%5 == 0)
 	}
 	result += "\n"
 
 	fmt.Print(result)
 }
 
-func rowToString(row [9]int) string {
+func rowToString(firstRow [9]int, secondRow [9]int, showArrow bool) string {
 	var builder strings.Builder
 
-	for i, value := range row {
+	for i, value := range firstRow {
 		if i > 0 && i%3 == 0 {
 			builder.WriteString("| ")
 		}
 		builder.WriteString(fmt.Sprintf("%v ", value))
 	}
+
+	if showArrow {
+		builder.WriteString(
+			strings.Repeat(" ", (sepSize-4)/2) +
+				"--->" +
+				strings.Repeat(" ", (sepSize-4)/2))
+	} else {
+		builder.WriteString(strings.Repeat(" ", sepSize))
+	}
+
+	for i, value := range secondRow {
+		if i > 0 && i%3 == 0 {
+			builder.WriteString("| ")
+		}
+		builder.WriteString(fmt.Sprintf("%v ", value))
+	}
+
 	builder.WriteString("\n")
 
 	return builder.String()
