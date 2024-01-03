@@ -20,16 +20,25 @@ func main() {
 		log.Fatal("Please, provide the file path")
 	}
 
-	Grid := readGridFromFile(*filePath)
-	fmt.Println("Input grid:")
-	printGrid(Grid)
+	Grids, err := readGridsFromFile(*filePath)
+	if err != nil {
+		log.Fatal("Error on reading grids from file:", err)
+	}
 
-	SolvedGrid, solved := solve(Grid)
-	if solved {
-		fmt.Println("Solved grid:")
-		printGrid(SolvedGrid)
-	} else {
-		log.Fatal("I couldn't solve the grid :(")
+	log.Printf("Found %v grid(s) in %v\n", len(Grids), *filePath)
+
+	for i, grid := range Grids {
+		log.Printf("Solving grid %v", i+1)
+		log.Printf("Input grid:")
+		printGrid(grid)
+
+		SolvedGrid, solved := solve(grid)
+		if solved {
+			log.Printf("Solved grid:")
+			printGrid(SolvedGrid)
+		} else {
+			log.Printf("I couldn't solve the grid :(")
+		}
 	}
 }
 
@@ -120,26 +129,45 @@ func firstEmptyCell(grid Grid) (int, int) {
 	return -1, -1
 }
 
-func readGridFromFile(filePath string) Grid {
+func readGridsFromFile(filePath string) ([]Grid, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	var grid Grid
-
+	grids := []Grid{}
 	scanner := bufio.NewScanner(file)
 
-	for i := 0; i < 9; i++ {
-		scanner.Scan()
+	for scanner.Scan() {
 		line := scanner.Text()
-		for j := 0; j < 9; j++ {
-			grid[i][j] = int(line[j]) - '0'
+
+		if len(line) == 0 {
+			continue
 		}
+
+		var grid Grid
+		for i := 0; i < 9; i++ {
+			if i > 0 {
+				scanner.Scan()
+				if len(scanner.Text()) == 0 {
+					break
+				}
+				line = scanner.Text()
+			}
+
+			for j := 0; j < 9; j++ {
+				grid[i][j] = int(line[j]) - '0'
+			}
+		}
+		grids = append(grids, grid)
 	}
 
-	return grid
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return grids, nil
 }
 
 func printGrid(grid Grid) {
